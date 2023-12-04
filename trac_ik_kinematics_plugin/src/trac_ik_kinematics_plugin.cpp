@@ -67,42 +67,43 @@ bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_m
     return false;
   }
 
-  num_joints_ = chain.getNrOfJoints();
+  const robot_model::JointModelGroup* group = robot_model.getJointModelGroup(group_name);
 
-  std::vector<KDL::Segment> chain_segs = chain.segments;
+  if (!group)
+  {
+    ROS_FATAL("Couldn't find group %s!", group_name.c_str());
+    return false;
+  }
 
-  urdf::JointConstSharedPtr joint;
-
-  std::vector<double> l_bounds, u_bounds;
+  num_joints_ = group->getActiveJointModels().size();
 
   joint_min.resize(num_joints_);
   joint_max.resize(num_joints_);
 
   uint joint_num = 0;
-  for (unsigned int i = 0; i < chain_segs.size(); ++i)
+  for (unsigned int i = 0; i < num_joints_; ++i)
   {
-
-    link_names_.push_back(chain_segs[i].getName());
-    joint = robot_model.getURDF()->getJoint(chain_segs[i].getJoint().getName());
-    if (joint->type != urdf::Joint::UNKNOWN && joint->type != urdf::Joint::FIXED)
+    const robot_model::JointModel* joint = group->getActiveJointModels()[i];
+    link_names_.push_back(joint->getName());
+    if (joint->getType() != moveit::core::JointModel::UNKNOWN && joint->getType() != moveit::core::JointModel::FIXED)
     {
       joint_num++;
       assert(joint_num <= num_joints_);
       float lower, upper;
       int hasLimits;
-      joint_names_.push_back(joint->name);
-      if (joint->type != urdf::Joint::CONTINUOUS)
+      joint_names_.push_back(joint->getName());
+      if (joint->getVariableBounds().front().position_bounded_)
       {
-        if (joint->safety)
+        /*if (joint->safety)
         {
           lower = std::max(joint->limits->lower, joint->safety->soft_lower_limit);
           upper = std::min(joint->limits->upper, joint->safety->soft_upper_limit);
         }
         else
-        {
-          lower = joint->limits->lower;
-          upper = joint->limits->upper;
-        }
+        {*/
+          lower = joint->getVariableBounds().front().min_position_;
+          upper = joint->getVariableBounds().front().max_position_;
+        //}
         hasLimits = 1;
       }
       else
@@ -119,7 +120,7 @@ bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_m
         joint_min(joint_num - 1) = std::numeric_limits<float>::lowest();
         joint_max(joint_num - 1) = std::numeric_limits<float>::max();
       }
-      ROS_INFO_STREAM("IK Using joint " << chain_segs[i].getName() << " " << joint_min(joint_num - 1) << " " << joint_max(joint_num - 1));
+      ROS_INFO_STREAM("IK Using joint " << joint->getName() << " " << joint_min(joint_num - 1) << " " << joint_max(joint_num - 1));
     }
   }
 
