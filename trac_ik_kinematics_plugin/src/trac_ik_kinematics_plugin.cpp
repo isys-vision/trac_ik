@@ -35,6 +35,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <kdl/tree.hpp>
 #include <kdl_parser/kdl_parser.hpp>
+#include <moveit/robot_model/robot_model.h>
 #include <trac_ik/trac_ik.hpp>
 #include <trac_ik/trac_ik_kinematics_plugin.hpp>
 #include <limits>
@@ -42,47 +43,27 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace trac_ik_kinematics_plugin
 {
 
-bool TRAC_IKKinematicsPlugin::initialize(const std::string &robot_description,
+bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_model,
     const std::string& group_name,
-    const std::string& base_name,
-    const std::string& tip_name,
+    const std::string& base_frame,
+    const std::vector<std::string>& tip_frames,
     double search_discretization)
 {
-  std::vector<std::string> tip_names = {tip_name};
-  setValues(robot_description, group_name, base_name, tip_names, search_discretization);
-
-  ros::NodeHandle node_handle("~");
-
-  urdf::Model robot_model;
-  std::string xml_string;
-
-  std::string urdf_xml, full_urdf_xml;
-  node_handle.param("urdf_xml", urdf_xml, robot_description);
-  node_handle.searchParam(urdf_xml, full_urdf_xml);
-
-  ROS_DEBUG_NAMED("trac_ik", "Reading xml file from parameter server");
-  if (!node_handle.getParam(full_urdf_xml, xml_string))
-  {
-    ROS_FATAL_NAMED("trac_ik", "Could not load the xml from parameter server: %s", urdf_xml.c_str());
-    return false;
-  }
-
-  node_handle.param(full_urdf_xml, xml_string, std::string());
-  robot_model.initString(xml_string);
+  storeValues(robot_model, group_name, base_frame, tip_frames, search_discretization);
 
   ROS_DEBUG_STREAM_NAMED("trac_ik", "Reading joints and links from URDF");
 
   KDL::Tree tree;
 
-  if (!kdl_parser::treeFromUrdfModel(robot_model, tree))
+  if (!kdl_parser::treeFromUrdfModel(*robot_model.getURDF(), tree))
   {
     ROS_FATAL("Failed to extract kdl tree from xml robot description");
     return false;
   }
 
-  if (!tree.getChain(base_name, tip_name, chain))
+  if (!tree.getChain(base_frame, tip_frames_.front(), chain))
   {
-    ROS_FATAL("Couldn't find chain %s to %s", base_name.c_str(), tip_name.c_str());
+    ROS_FATAL("Couldn't find chain %s to %s", base_frame.c_str(), tip_frames.front().c_str());
     return false;
   }
 
@@ -102,7 +83,7 @@ bool TRAC_IKKinematicsPlugin::initialize(const std::string &robot_description,
   {
 
     link_names_.push_back(chain_segs[i].getName());
-    joint = robot_model.getJoint(chain_segs[i].getJoint().getName());
+    joint = robot_model.getURDF()->getJoint(chain_segs[i].getJoint().getName());
     if (joint->type != urdf::Joint::UNKNOWN && joint->type != urdf::Joint::FIXED)
     {
       joint_num++;
