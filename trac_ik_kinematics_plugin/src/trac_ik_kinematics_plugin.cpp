@@ -84,7 +84,7 @@ bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_m
   for (unsigned int i = 0; i < num_joints_; ++i)
   {
     const robot_model::JointModel* joint = group->getActiveJointModels()[i];
-    link_names_.push_back(joint->getName());
+    link_names_.push_back(joint->getChildLinkModel()->getName());
     if (joint->getType() != moveit::core::JointModel::UNKNOWN && joint->getType() != moveit::core::JointModel::FIXED)
     {
       joint_num++;
