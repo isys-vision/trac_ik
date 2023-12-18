@@ -94,16 +94,8 @@ bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_m
       joint_names_.push_back(joint->getName());
       if (joint->getVariableBounds().front().position_bounded_)
       {
-        /*if (joint->safety)
-        {
-          lower = std::max(joint->limits->lower, joint->safety->soft_lower_limit);
-          upper = std::min(joint->limits->upper, joint->safety->soft_upper_limit);
-        }
-        else
-        {*/
-          lower = joint->getVariableBounds().front().min_position_;
-          upper = joint->getVariableBounds().front().max_position_;
-        //}
+        lower = joint->getVariableBounds().front().min_position_;
+        upper = joint->getVariableBounds().front().max_position_;
         hasLimits = 1;
       }
       else
@@ -195,7 +187,6 @@ bool TRAC_IKKinematicsPlugin::getPositionFK(const std::vector<std::string> &link
 
   return valid;
 }
-
 
 bool TRAC_IKKinematicsPlugin::getPositionIK(const geometry_msgs::Pose &ik_pose,
     const std::vector<double> &ik_seed_state,
@@ -388,8 +379,6 @@ bool TRAC_IKKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose &ik_pos
   error_code.val = moveit_msgs::MoveItErrorCodes::NO_IK_SOLUTION;
   return false;
 }
-
-
 
 } // end namespace
 
