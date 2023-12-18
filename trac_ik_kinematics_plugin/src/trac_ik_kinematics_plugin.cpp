@@ -92,6 +92,10 @@ bool TRAC_IKKinematicsPlugin::initialize(const moveit::core::RobotModel& robot_m
       float lower, upper;
       int hasLimits;
       joint_names_.push_back(joint->getName());
+
+      if (joint->getVariableBounds().size() > 1) // JointModel can be Multi-DOF
+        ROS_INFO_NAMED("trac-ik plugin", "Multi-DOF joints are not supported, only the bounds for the first DOF are checked. Joint name: %s", joint->getName().c_str());
+
       if (joint->getVariableBounds().front().position_bounded_)
       {
         lower = joint->getVariableBounds().front().min_position_;
